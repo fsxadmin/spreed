@@ -118,11 +118,19 @@
 				});
 			},
 			templateContext: function() {
+				var isSelf = false,
+					isModerator = false;
+				if (OC.getCurrentUser().uid) {
+					isSelf = this.model.get('userId') === OC.getCurrentUser().uid;
+					isModerator = OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.OWNER ||
+						OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.MODERATOR;
+				} else {
+					isSelf = this.model.get('sessionId') === OCA.SpreedMe.app.activeRoom.get('sessionId');
+					isModerator = OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.GUEST_MODERATOR;
+				}
+
 				var canModerate = this.model.get('participantType') !== OCA.SpreedMe.app.OWNER &&       // can not moderate owners
-					this.model.get('userId') !== OC.getCurrentUser().uid &&                // can not moderate yourself
-					(OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.OWNER ||   // current user must be owner
-						OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.MODERATOR ||   // or moderator
-						OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.GUEST_MODERATOR), // or guest moderator.
+					!isSelf && isModerator,
 					name = '';
 
 
