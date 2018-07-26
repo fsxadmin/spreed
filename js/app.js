@@ -33,6 +33,7 @@
 		USER: 3,
 		GUEST: 4,
 		USERSELFJOINED: 5,
+		GUEST_MODERATOR: 6,
 
 		/** @property {OCA.SpreedMe.Models.Room} activeRoom  */
 		activeRoom: null,

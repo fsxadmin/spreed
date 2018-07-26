@@ -32,6 +32,7 @@ class Participant {
 	const USER = 3;
 	const GUEST = 4;
 	const USER_SELF_JOINED = 5;
+	const GUEST_MODERATOR = 6;
 
 	/** @var IDBConnection */
 	protected $db;
@@ -75,23 +76,35 @@ class Participant {
 		$this->lastMention = $lastMention;
 	}
 
-	public function getUser() {
+	public function getUser(): string {
 		return $this->user;
 	}
 
-	public function getParticipantType() {
+	public function getParticipantType(): int {
 		return $this->participantType;
 	}
 
-	public function getLastPing() {
+	public function isGuest(): bool {
+		return \in_array($this->participantType, [self::GUEST, self::GUEST_MODERATOR], true);
+	}
+
+	public function hasModeratorPermissions(bool $guestModeratorAllowed = true): bool {
+		if (!$guestModeratorAllowed) {
+			return \in_array($this->participantType, [self::OWNER, self::MODERATOR], true);
+		}
+
+		return \in_array($this->participantType, [self::OWNER, self::MODERATOR, self::GUEST_MODERATOR], true);
+	}
+
+	public function getLastPing(): int {
 		return $this->lastPing;
 	}
 
-	public function getSessionId() {
+	public function getSessionId(): string {
 		return $this->sessionId;
 	}
 
-	public function isInCall() {
+	public function isInCall(): bool {
 		return $this->inCall;
 	}
 
@@ -102,14 +115,11 @@ class Participant {
 		return $this->lastMention;
 	}
 
-	/**
-	 * @return bool
-	 */
-	public function isFavorite() {
+	public function isFavorite(): bool {
 		return $this->isFavorite;
 	}
 
-	public function setFavorite($favor) {
+	public function setFavorite(bool $favor): bool {
 		if (!$this->user) {
 			return false;
 		}

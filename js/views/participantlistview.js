@@ -35,6 +35,7 @@
 			' {{name}}' +
 			'{{#if participantIsOwner}}<span class="participant-moderator-indicator">(' + t('spreed', 'moderator') + ')</span>{{/if}}' +
 			'{{#if participantIsModerator}}<span class="participant-moderator-indicator">(' + t('spreed', 'moderator') + ')</span>{{/if}}' +
+			'{{#if participantIsGuestModerator}}<span class="participant-moderator-indicator">(' + t('spreed', 'moderator') + ')</span>{{/if}}' +
 			'{{#if inCall}}<span class="icon icon-video"></span>{{/if}}' +
 		'</a>'+
 		'{{#if canModerate}}' +
@@ -45,7 +46,7 @@
 			'</div>'+
 			'<div class="popovermenu bubble menu">'+
 				'<ul class="popovermenu-list">'+
-					'{{#if participantIsModerator}}' +
+					'{{#if canBeDemoted}}' +
 					'<li>' +
 						'<button class="demote-moderator">' +
 							'<span class="icon icon-star"></span>' +
@@ -53,7 +54,7 @@
 						'</button>' +
 					'</li>' +
 					'{{else}}' +
-						'{{#if participantIsUser}}' +
+						'{{#if canBePromoted}}' +
 						'<li>' +
 							'<button class="promote-moderator">' +
 								'<span class="icon icon-rename"></span>' +
@@ -120,7 +121,8 @@
 				var canModerate = this.model.get('participantType') !== OCA.SpreedMe.app.OWNER &&       // can not moderate owners
 					this.model.get('userId') !== OC.getCurrentUser().uid &&                // can not moderate yourself
 					(OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.OWNER ||   // current user must be owner
-						OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.MODERATOR), // or moderator.
+						OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.MODERATOR ||   // or moderator
+						OCA.SpreedMe.app.activeRoom.get('participantType') === OCA.SpreedMe.app.GUEST_MODERATOR), // or guest moderator.
 					name = '';
 
 
@@ -132,8 +134,11 @@
 
 				return {
 					canModerate: canModerate,
+					canBePromoted: this.model.get('participantType') === OCA.SpreedMe.app.USER || this.model.get('participantType') === OCA.SpreedMe.app.GUEST,
+					canBeDemoted: this.model.get('participantType') === OCA.SpreedMe.app.MODERATOR || this.model.get('participantType') === OCA.SpreedMe.app.GUEST_MODERATOR,
 					name: name,
 					participantIsUser: this.model.get('participantType') === OCA.SpreedMe.app.USER,
+					participantIsGuestModerator: this.model.get('participantType') === OCA.SpreedMe.app.GUEST_MODERATOR,
 					participantIsModerator: this.model.get('participantType') === OCA.SpreedMe.app.MODERATOR,
 					participantIsOwner: this.model.get('participantType') === OCA.SpreedMe.app.OWNER
 				};
@@ -186,15 +191,23 @@
 					return;
 				}
 
-				var participantId = this.model.get('userId'),
+				var data = {},
 					self = this;
+
+				if (this.model.get('userId')) {
+					data = {
+						participant: this.model.get('userId')
+					};
+				} else {
+					data = {
+						sessionId: this.model.get('sessionId')
+					};
+				}
 
 				$.ajax({
 					type: 'POST',
 					url: OC.linkToOCS('apps/spreed/api/v1/room', 2) + OCA.SpreedMe.app.activeRoom.get('token') + '/moderators',
-					data: {
-						participant: participantId
-					},
+					data: data,
 					success: function() {
 						self.render();
 					},
@@ -208,15 +221,23 @@
 					return;
 				}
 
-				var participantId = this.model.get('userId'),
+				var data = {},
 					self = this;
+
+				if (this.model.get('userId')) {
+					data = {
+						participant: this.model.get('userId')
+					};
+				} else {
+					data = {
+						sessionId: this.model.get('sessionId')
+					};
+				}
 
 				$.ajax({
 					type: 'DELETE',
 					url: OC.linkToOCS('apps/spreed/api/v1/room', 2) + OCA.SpreedMe.app.activeRoom.get('token') + '/moderators',
-					data: {
-						participant: participantId
-					},
+					data:data,
 					success: function() {
 						self.render();
 					},
