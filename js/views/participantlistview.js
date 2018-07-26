@@ -187,7 +187,8 @@
 				this.ui.menu.toggleClass('open', this.menuShown);
 			},
 			promoteToModerator: function() {
-				if (this.model.get('participantType') !== OCA.SpreedMe.app.USER) {
+				if (this.model.get('participantType') !== OCA.SpreedMe.app.USER &&
+					this.model.get('participantType') !== OCA.SpreedMe.app.GUEST) {
 					return;
 				}
 
@@ -217,7 +218,8 @@
 				});
 			},
 			demoteFromModerator: function() {
-				if (this.model.get('participantType') !== OCA.SpreedMe.app.MODERATOR) {
+				if (this.model.get('participantType') !== OCA.SpreedMe.app.MODERATOR &&
+					this.model.get('participantType') !== OCA.SpreedMe.app.GUEST_MODERATOR) {
 					return;
 				}
 
