@@ -210,10 +210,12 @@
 					data = {
 						participant: this.model.get('userId')
 					};
+					this.model.set('participantType', OCA.SpreedMe.app.MODERATOR);
 				} else {
 					data = {
 						sessionId: this.model.get('sessionId')
 					};
+					this.model.set('participantType', OCA.SpreedMe.app.GUEST_MODERATOR);
 				}
 
 				$.ajax({
@@ -241,10 +243,12 @@
 					data = {
 						participant: this.model.get('userId')
 					};
+					this.model.set('participantType', OCA.SpreedMe.app.USER);
 				} else {
 					data = {
 						sessionId: this.model.get('sessionId')
 					};
+					this.model.set('participantType', OCA.SpreedMe.app.GUEST);
 				}
 
 				$.ajax({
