@@ -272,7 +272,8 @@
 					participantId = this.model.get('userId'),
 					endpoint = '/participants';
 
-				if (this.model.get('participantType') === OCA.SpreedMe.app.GUEST) {
+				if (this.model.get('participantType') === OCA.SpreedMe.app.GUEST ||
+						this.model.get('participantType') === OCA.SpreedMe.app.GUEST_MODERATOR) {
 					participantId = this.model.get('sessionId');
 					endpoint += '/guests';
 				}
