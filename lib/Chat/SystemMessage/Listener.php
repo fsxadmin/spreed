@@ -166,6 +166,7 @@ class Listener {
 				'message' => $message,
 				'parameters' => $parameters,
 			]);
+			$event->stopPropagation();
 		});
 	}
 
