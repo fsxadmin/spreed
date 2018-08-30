@@ -41,7 +41,10 @@
 		'{{#if canModerate}}' +
 			'<div class="participant-entry-utils">'+
 				'<ul>'+
-					'<li class="participant-entry-utils-menu-button"><button class="icon icon-more"></button></li>'+
+					'<li class="participant-entry-utils-menu-button">' +
+						'<button class="icon icon-more"></button>' +
+						'<span class="icon-loading-small hidden"></span>' +
+					'</li>' +
 				'</ul>'+
 			'</div>'+
 			'<div class="popovermenu bubble menu">'+
@@ -185,7 +188,9 @@
 			},
 			ui: {
 				'participant': 'li.participant',
-				'menu': '.popovermenu'
+				'menu': '.popovermenu',
+				'menuButton': '.participant-entry-utils-menu-button button',
+				'menuButtonIconLoading': '.participant-entry-utils-menu-button .icon-loading-small'
 			},
 			template: Handlebars.compile(ITEM_TEMPLATE),
 			menuShown: false,
@@ -210,13 +215,17 @@
 					data = {
 						participant: this.model.get('userId')
 					};
-					this.model.set('participantType', OCA.SpreedMe.app.MODERATOR);
+// 					this.model.set('participantType', OCA.SpreedMe.app.MODERATOR);
 				} else {
 					data = {
 						sessionId: this.model.get('sessionId')
 					};
-					this.model.set('participantType', OCA.SpreedMe.app.GUEST_MODERATOR);
+// 					this.model.set('participantType', OCA.SpreedMe.app.GUEST_MODERATOR);
 				}
+
+				this.toggleMenuClass();
+				this.ui.menuButton.hide();
+				this.ui.menuButtonIconLoading.show();
 
 				$.ajax({
 					type: 'POST',
@@ -226,6 +235,9 @@
 						self.render();
 					},
 					error: function() {
+						this.ui.menuButtonIconLoading.hide();
+						this.ui.menuButton.show();
+
 						console.log('Error while promoting user to moderator');
 					}
 				});
@@ -243,13 +255,17 @@
 					data = {
 						participant: this.model.get('userId')
 					};
-					this.model.set('participantType', OCA.SpreedMe.app.USER);
+// 					this.model.set('participantType', OCA.SpreedMe.app.USER);
 				} else {
 					data = {
 						sessionId: this.model.get('sessionId')
 					};
-					this.model.set('participantType', OCA.SpreedMe.app.GUEST);
+// 					this.model.set('participantType', OCA.SpreedMe.app.GUEST);
 				}
+
+				this.toggleMenuClass();
+				this.ui.menuButton.hide();
+				this.ui.menuButtonIconLoading.show();
 
 				$.ajax({
 					type: 'DELETE',
@@ -259,6 +275,9 @@
 						self.render();
 					},
 					error: function() {
+						this.ui.menuButtonIconLoading.hide();
+						this.ui.menuButton.show();
+
 						console.log('Error while demoting moderator');
 					}
 				});
