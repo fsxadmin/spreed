@@ -54,6 +54,8 @@ class Participant {
 	protected $inCall;
 	/** @var bool */
 	private $isFavorite;
+	/** @var int */
+	private $lastReadMessage;
 	/** @var \DateTime|null */
 	private $lastMention;
 
@@ -66,9 +68,10 @@ class Participant {
 	 * @param string $sessionId
 	 * @param int $inCall
 	 * @param bool $isFavorite
+	 * @param int $lastReadMessage
 	 * @param \DateTime|null $lastMention
 	 */
-	public function __construct(IDBConnection $db, Room $room, $user, $participantType, $lastPing, $sessionId, $inCall, $isFavorite, \DateTime $lastMention = null) {
+	public function __construct(IDBConnection $db, Room $room, string $user, int $participantType, int $lastPing, string $sessionId, int $inCall, bool $isFavorite, int $lastReadMessage, \DateTime $lastMention = null) {
 		$this->db = $db;
 		$this->room = $room;
 		$this->user = $user;
@@ -77,26 +80,27 @@ class Participant {
 		$this->sessionId = $sessionId;
 		$this->inCall = $inCall;
 		$this->isFavorite = $isFavorite;
+		$this->lastReadMessage = $lastReadMessage;
 		$this->lastMention = $lastMention;
 	}
 
-	public function getUser() {
+	public function getUser(): string {
 		return $this->user;
 	}
 
-	public function getParticipantType() {
+	public function getParticipantType(): int {
 		return $this->participantType;
 	}
 
-	public function getLastPing() {
+	public function getLastPing(): int {
 		return $this->lastPing;
 	}
 
-	public function getSessionId() {
+	public function getSessionId(): string {
 		return $this->sessionId;
 	}
 
-	public function getInCallFlags() {
+	public function getInCallFlags(): int {
 		return $this->inCall;
 	}
 
@@ -107,14 +111,11 @@ class Participant {
 		return $this->lastMention;
 	}
 
-	/**
-	 * @return bool
-	 */
-	public function isFavorite() {
+	public function isFavorite(): bool {
 		return $this->isFavorite;
 	}
 
-	public function setFavorite($favor) {
+	public function setFavorite(bool $favor): bool {
 		if (!$this->user) {
 			return false;
 		}
@@ -127,6 +128,26 @@ class Participant {
 		$query->execute();
 
 		$this->isFavorite = $favor;
+		return true;
+	}
+
+	public function getLastReadMessage(): int {
+		return $this->lastReadMessage;
+	}
+
+	public function setLastReadMessage(int $messageId): bool {
+		if (!$this->user) {
+			return false;
+		}
+
+		$query = $this->db->getQueryBuilder();
+		$query->update('talk_participants')
+			->set('last_read_message', $query->createNamedParameter($messageId, IQueryBuilder::PARAM_INT))
+			->where($query->expr()->eq('user_id', $query->createNamedParameter($this->user)))
+			->andWhere($query->expr()->eq('room_id', $query->createNamedParameter($this->room->getId())));
+		$query->execute();
+
+		$this->lastReadMessage = $messageId;
 		return true;
 	}
 }
