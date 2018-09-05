@@ -25,10 +25,18 @@ namespace OCA\Spreed\Migration;
 use Doctrine\DBAL\Schema\SchemaException;
 use Doctrine\DBAL\Types\Type;
 use OCP\DB\ISchemaWrapper;
+use OCP\IDBConnection;
 use OCP\Migration\SimpleMigrationStep;
 use OCP\Migration\IOutput;
 
 class Version3003Date20180831082627 extends SimpleMigrationStep {
+
+	/** @var IDBConnection */
+	protected $connection;
+
+	public function __construct(IDBConnection $connection) {
+		$this->connection = $connection;
+	}
 
 	/**
 	 * @param IOutput $output
@@ -51,5 +59,32 @@ class Version3003Date20180831082627 extends SimpleMigrationStep {
 		}
 
 		return $schema;
+	}
+
+	/**
+	 * @param IOutput $output
+	 * @param \Closure $schemaClosure The `\Closure` returns a `ISchemaWrapper`
+	 * @param array $options
+	 * @since 13.0.0
+	 */
+	public function postSchemaChange(IOutput $output, \Closure $schemaClosure, array $options) {
+		$query = $this->connection->getQueryBuilder();
+		$query->select('m.user_id', 'm.object_id')
+			->selectAlias($query->createFunction('MAX(' . $query->getColumnName('c.id') . ')'), 'last_comment')
+			->from('comments_read_marker', 'm')
+			->leftJoin('m', 'comments', 'c', $query->expr()->andX(
+				$query->expr()->eq('c.object_id', 'm.object_id'),
+				$query->expr()->eq('c.object_type', 'm.object_type'),
+				$query->expr()->eq('c.creation_timestamp', 'm.marker_datetime')
+			))
+			->where($query->expr()->eq('m.object_type', $query->createNamedParameter('chat')))
+			->groupBy('m.user_id', 'm.object_id');
+
+		$update = $this->connection->getQueryBuilder();
+		$update->update('talk_participants')
+			->set('last_read_message', $update->createParameter('message_id'))
+			->where($update->expr()->eq('user_id', $update->createParameter('user_id')))
+			->andWhere($update->expr()->eq('room_id', $update->createParameter('room_id')));
+
 	}
 }
