@@ -22,8 +22,21 @@
 <template>
 	<div
 		class="wrapper">
+
 		<div
 			class="new-message">
+			<transition name="fade" mode="in-out">
+				<div
+					class="new-message-busy-overlay"
+					v-if="blockMessage">
+					<div
+						class="icon-loading" />
+					<div
+						class="new-message-busy-overlay__text">
+						{{blockMessage}}
+					</div>
+				</div>
+			</transition>
 			<form
 				class="new-message-form">
 				<div
@@ -76,6 +89,16 @@ export default {
 	components: {
 		AdvancedInput,
 		Quote,
+	},
+	props: {
+		/**
+		 *  An external message to display while the form should be disabled.
+		 */
+		blockMessage: {
+			type: String,
+			required: false,
+			default: null
+		},
 	},
 	data: function() {
 		return {
@@ -299,5 +322,39 @@ export default {
 			border: none;
 		}
 	}
+}
+
+.new-message-busy-overlay {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	background-color: var(--color-main-background);
+
+	.icon-loading {
+		flex: 44px 0 0;
+	}
+
+	.new-message-busy-overlay__text {
+		flex: auto;
+		padding: 7px 6px;
+		font-size: 14px;
+		font-weight: bold;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		overflow: hidden;
+	}
+}
+
+.fade-enter-active, .fade-leave-active {
+	transition: opacity .5s;
+}
+
+.fade-enter, .fade-leave-to {
+	opacity: 0 !important;
 }
 </style>
