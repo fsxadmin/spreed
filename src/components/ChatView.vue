@@ -32,7 +32,9 @@
 			<div v-if="filesDragging" class="drag-indicator"></div>
 		</transition>
 		<MessagesList :token="token" />
-		<NewMessageForm :blockMessage="formBlockMessage" />
+		<NewMessageForm
+			:blockMessage="formBlockMessage"
+			@files-pasted="handleFilesPasting" />
 	</div>
 </template>
 
@@ -41,8 +43,11 @@ import axios from '@nextcloud/axios'
 import { generateOcsUrl } from '@nextcloud/router'
 import MessagesList from './MessagesList/MessagesList'
 import NewMessageForm from './NewMessageForm/NewMessageForm'
+import { exists, createDirectoryRecursive } from '../services/filesService'
+import { randomizeFileName } from '../utils/path'
 
-const DEFAULT_TALK_FILES_DIRECTORY = '/Talk'
+const DEFAULT_TALK_FILES_DIRECTORY = '/TalkFiles'
+const RANDOMIZE_CLIPBOARD_FILENAMES = true
 
 export default {
 
@@ -96,7 +101,7 @@ export default {
 			// change during async operations.
 			const token = this.token
 
-			this.sendFiles(files, token)
+			this.sendFiles(files, token, false)
 		},
 
 		/**
@@ -104,15 +109,24 @@ export default {
 		 *
 		 * @param {File[]} files an array of files to send
 		 * @param {String} token current room token
+		 * @param {boolean} randomizeNames the flag indicating whether the names should be randomized
 		 */
-		async sendFiles(files, token) {
+		async sendFiles(files, token, randomizeNames) {
 			console.debug('Files for uploading', files)
 
-			const basePath = await this.ensureBasePathExists()
+			this.formBlockMessage = '...'
+
+			const client = OC.Files.getClient()
+			const basePath = await createDirectoryRecursive(client, [DEFAULT_TALK_FILES_DIRECTORY, token])
+
 			for (let i = 0; i < files.length; i++) {
 				try {
-					this.formBlockMessage = t('spreed', 'Uploading file') + ' ' + files[i].name + '...'
-					await this.sendSingleFile(basePath, files[i], token)
+					const originalName = files[i].name
+					const fileName = randomizeNames ? randomizeFileName(originalName, 5) : originalName
+
+					this.formBlockMessage = t('spreed', 'Uploading file') + ' ' + fileName + '...'
+
+					await this.sendSingleFile(basePath, files[i], fileName, token)
 				} catch (error) {
 					if (error.response
 							&& error.response.data
@@ -136,15 +150,16 @@ export default {
 		 *
 		 * @param {String} base base directory path
 		 * @param {File} file the file object
+		 * @param {String} fileName the name of the file
 		 * @param {String} token current room token
 		 */
-		async sendSingleFile(base, file, token) {
-			const fullPath = base + '/' + file.name
+		async sendSingleFile(base, file, fileName, token) {
 			const fileContent = await this.readFile(file)
 
 			// Step 1 - Upload the file to a shared directory.
-			const uploadResult = await OC.Files.getClient().putFileContents(fullPath, fileContent, { overwrite: false })
-			console.debug('File upload result', uploadResult)
+			const fullPath = await this.putUniqueFile(base, fileName, fileContent)
+
+			console.debug('File upload result', fullPath)
 
 			try {
 				// Step 2 - share uploaded file with the chat room.
@@ -171,23 +186,27 @@ export default {
 			}
 		},
 
-		/**
-		 * Creates a directory to store uploaded files if it does not exist.
-		 *
-		 * @returns {String} base path to the share directory
-		 */
-		async ensureBasePathExists() {
-			const path = DEFAULT_TALK_FILES_DIRECTORY
+		async putUniqueFile(base, fileName, fileContent) {
+			const lastDotFileNameIndex = fileName.lastIndexOf('.')
+			const fileNameWithoutExtension = lastDotFileNameIndex < 0 ? fileName : fileName.substring(0, lastDotFileNameIndex)
+			const extension = lastDotFileNameIndex < 0 ? '' : fileName.substring(lastDotFileNameIndex, fileName.length)
+
 			const client = OC.Files.getClient()
 
-			try {
-				await client.getFileInfo(path)
-				return path
-			} catch (error) {
-				if (error === 404) {
-					await client.createDirectory(path)
-					return path
+			let randomizationSalt = ''
+			let index = 0
+
+			while (true) {
+				const randomizedFileName = fileNameWithoutExtension + randomizationSalt + extension
+				const fullPath = base + '/' + randomizedFileName
+
+				if (!await exists(client, fullPath)) {
+					await client.putFileContents(fullPath, fileContent, { overwrite: false })
+					return fullPath
 				}
+
+				index++
+				randomizationSalt = '_' + index.toString()
 			}
 		},
 
@@ -209,6 +228,10 @@ export default {
 
 				reader.readAsArrayBuffer(file)
 			})
+		},
+
+		async handleFilesPasting(files) {
+			this.sendFiles(files, this.token, RANDOMIZE_CLIPBOARD_FILENAMES)
 		},
 	},
 }

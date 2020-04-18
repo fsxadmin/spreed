@@ -83,6 +83,7 @@ import Avatar from '@nextcloud/vue/dist/Components/Avatar'
 import Mention from '../../MessagesList/MessagesGroup/Message/MessagePart/Mention'
 import escapeHtml from 'escape-html'
 import debounce from 'debounce'
+import { fetchClipboardContent } from '../../../utils/clipboard'
 
 /**
  * Checks whether the given style sheet is the default style sheet from the
@@ -226,11 +227,23 @@ export default {
 		EventBus.$off('focusChatInput', this.focusInput)
 	},
 	methods: {
+		/**
+		 * Handles pasting from clipboard
+		 *
+		 * @param {ClipboardEvent} e native event
+		 */
 		onPaste(e) {
 			e.preventDefault()
-			const text = e.clipboardData.getData('text/plain')
-			const div = document.createElement('div').innerText = escapeHtml(text)
-			document.execCommand('insertHtml', false, div)
+
+			const content = fetchClipboardContent(e)
+
+			if (content.kind === 'file') {
+				this.$emit('files-pasted', content.files)
+			} else if (content.kind === 'text') {
+				const text = content.text
+				const div = document.createElement('div').innerText = escapeHtml(text)
+				document.execCommand('insertHtml', false, div)
+			}
 		},
 
 		/**

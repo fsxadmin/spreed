@@ -56,6 +56,7 @@
 						v-model="text"
 						:token="token"
 						@update:contentEditable="contentEditableToParsed"
+						@files-pasted="handleFilesPasting"
 						@submit="handleSubmit" />
 				</div>
 				<button
@@ -284,6 +285,15 @@ export default {
 				}
 
 			}
+		},
+
+		/**
+		 * Handles files pasting event.
+		 *
+		 * @param {File[] | FileList} files pasted files list
+		 */
+		handleFilesPasting(files) {
+			this.$emit('files-pasted', files)
 		},
 	},
 }
