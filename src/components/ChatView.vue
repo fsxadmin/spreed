@@ -43,7 +43,7 @@ import axios from '@nextcloud/axios'
 import { generateOcsUrl } from '@nextcloud/router'
 import MessagesList from './MessagesList/MessagesList'
 import NewMessageForm from './NewMessageForm/NewMessageForm'
-import { exists, createDirectoryRecursive } from '../services/filesService'
+import { putUniqueFileContents } from '../services/filesService'
 import { randomizeFileName } from '../utils/path'
 
 const DEFAULT_TALK_FILES_DIRECTORY = '/TalkFiles'
@@ -112,12 +112,12 @@ export default {
 		 * @param {boolean} randomizeNames the flag indicating whether the names should be randomized
 		 */
 		async sendFiles(files, token, randomizeNames) {
-			console.debug('Files for uploading', files)
-
 			this.formBlockMessage = '...'
 
 			const client = OC.Files.getClient()
-			const basePath = await createDirectoryRecursive(client, [DEFAULT_TALK_FILES_DIRECTORY, token])
+			const basePath = await this.$store.dispatch(
+				'ensureHasTokenDirectory',
+				{ client, token, baseDirectory: DEFAULT_TALK_FILES_DIRECTORY })
 
 			for (let i = 0; i < files.length; i++) {
 				try {
@@ -157,9 +157,7 @@ export default {
 			const fileContent = await this.readFile(file)
 
 			// Step 1 - Upload the file to a shared directory.
-			const fullPath = await this.putUniqueFile(base, fileName, fileContent)
-
-			console.debug('File upload result', fullPath)
+			const fullPath = await putUniqueFileContents(OC.Files.getClient(), base, fileName, fileContent)
 
 			try {
 				// Step 2 - share uploaded file with the chat room.
@@ -186,35 +184,11 @@ export default {
 			}
 		},
 
-		async putUniqueFile(base, fileName, fileContent) {
-			const lastDotFileNameIndex = fileName.lastIndexOf('.')
-			const fileNameWithoutExtension = lastDotFileNameIndex < 0 ? fileName : fileName.substring(0, lastDotFileNameIndex)
-			const extension = lastDotFileNameIndex < 0 ? '' : fileName.substring(lastDotFileNameIndex, fileName.length)
-
-			const client = OC.Files.getClient()
-
-			let randomizationSalt = ''
-			let index = 0
-
-			while (true) {
-				const randomizedFileName = fileNameWithoutExtension + randomizationSalt + extension
-				const fullPath = base + '/' + randomizedFileName
-
-				if (!await exists(client, fullPath)) {
-					await client.putFileContents(fullPath, fileContent, { overwrite: false })
-					return fullPath
-				}
-
-				index++
-				randomizationSalt = '_' + index.toString()
-			}
-		},
-
 		/**
 		 * Reads a file content.
 		 *
 		 * @param {File} file the file to read content from
-		 * @returns {ByteArray} file content
+		 * @returns {ArrayBuffer|String} file content
 		 */
 		readFile(file) {
 			return new Promise((resolve, reject) => {

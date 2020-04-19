@@ -5,6 +5,8 @@
  * @param {String} path file or directory path
  * @returns {Promise<boolean>}
  */
+import { addFileNameSuffix, getFileInfo } from '../utils/path'
+
 const exists = async function(client, path) {
 	try {
 		await client.getFileInfo(path)
@@ -40,7 +42,38 @@ const createDirectoryRecursive = async function(client, pathComponents) {
 	return path
 }
 
+/**
+ * Puts the file content making sure the name is unique. If the file
+ * with the same name already exists, the suffix will be added to the
+ * file name until it's unique.
+ *
+ * @param {OC.Files.Client} client OC.Files client
+ * @param {String} base base directory to put the file
+ * @param {String} fileName file name
+ * @param {ArrayBuffer|String} fileContent file content
+ * @returns {Promise<String>}
+ */
+const putUniqueFileContents = async function(client, base, fileName, fileContent) {
+	const fileInfo = getFileInfo(fileName)
+
+	let randomizationSalt = ''
+	let index = 0
+
+	while (true) {
+		const fullPath = base + '/' + addFileNameSuffix(fileInfo, randomizationSalt)
+
+		if (!await exists(client, fullPath)) {
+			await client.putFileContents(fullPath, fileContent, { overwrite: false })
+			return fullPath
+		}
+
+		index++
+		randomizationSalt = '_' + index.toString()
+	}
+}
+
 export {
 	exists,
 	createDirectoryRecursive,
+	putUniqueFileContents
 }
