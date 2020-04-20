@@ -46,7 +46,7 @@ import NewMessageForm from './NewMessageForm/NewMessageForm'
 import { putUniqueFileContents } from '../services/filesService'
 import { randomizeFileName } from '../utils/path'
 
-const DEFAULT_TALK_FILES_DIRECTORY = '/TalkFiles'
+const DEFAULT_TALK_FILES_DIRECTORY = '/Talk files'
 const RANDOMIZE_CLIPBOARD_FILENAMES = true
 
 export default {
@@ -154,10 +154,8 @@ export default {
 		 * @param {String} token current room token
 		 */
 		async sendSingleFile(base, file, fileName, token) {
-			const fileContent = await this.readFile(file)
-
 			// Step 1 - Upload the file to a shared directory.
-			const fullPath = await putUniqueFileContents(OC.Files.getClient(), base, fileName, fileContent)
+			const fullPath = await putUniqueFileContents(OC.Files.getClient(), base, fileName, file)
 
 			try {
 				// Step 2 - share uploaded file with the chat room.
@@ -182,26 +180,6 @@ export default {
 					throw error
 				}
 			}
-		},
-
-		/**
-		 * Reads a file content.
-		 *
-		 * @param {File} file the file to read content from
-		 * @returns {ArrayBuffer|String} file content
-		 */
-		readFile(file) {
-			return new Promise((resolve, reject) => {
-				const reader = new FileReader()
-
-				reader.onload = () => {
-					resolve(reader.result)
-				}
-
-				reader.onerror = reject
-
-				reader.readAsArrayBuffer(file)
-			})
 		},
 
 		async handleFilesPasting(files) {

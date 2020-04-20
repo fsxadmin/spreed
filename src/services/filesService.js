@@ -50,7 +50,7 @@ const createDirectoryRecursive = async function(client, pathComponents) {
  * @param {OC.Files.Client} client OC.Files client
  * @param {String} base base directory to put the file
  * @param {String} fileName file name
- * @param {ArrayBuffer|String} fileContent file content
+ * @param {ArrayBuffer|String|File} fileContent file content
  * @returns {Promise<String>}
  */
 const putUniqueFileContents = async function(client, base, fileName, fileContent) {
@@ -63,7 +63,7 @@ const putUniqueFileContents = async function(client, base, fileName, fileContent
 		const fullPath = base + '/' + addFileNameSuffix(fileInfo, randomizationSalt)
 
 		if (!await exists(client, fullPath)) {
-			await client.putFileContents(fullPath, fileContent, { overwrite: false })
+			await client.putFileContents(fullPath, fileContent)
 			return fullPath
 		}
 
