@@ -51,7 +51,7 @@ module.exports = {
 				 * (like "attachmediastream"), so it needs to be added back with
 				 * a plugin.
 				 */
-				test: /node_modules\/webrtc-adapter\/.*\.js$/,
+				test: /node_modules(\/|\\)webrtc-adapter(\/|\\).*\.js$/,
 				loader: 'babel-loader',
 				options: {
 					plugins: ['add-module-exports'],
