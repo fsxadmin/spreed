@@ -6,14 +6,17 @@
 	"author": "Joas Schilling <coding@schilljs.com>",
 	"scripts": {
 		"build": "NODE_ENV=production webpack --progress --hide-modules --config webpack.prod.js",
+		"win-build": "set NODE_ENV=production && webpack --progress --hide-modules --config webpack.prod.js",
 		"test:unit": "vue-cli-service test:unit",
 		"test:watch": "vue-cli-service test:unit --watchAll",
 		"lint": "eslint --ext .js,.vue src",
 		"dev": "NODE_ENV=development webpack --config webpack.dev.js",
+		"win-dev": "set NODE_ENV=development && webpack --config webpack.dev.js",
 		"lint:fix": "eslint --ext .js,.vue src --fix",
 		"stylelint": "stylelint -f verbose --config .stylelintrc src",
 		"stylelint:fix": "stylelint --config .stylelintrc src --fix",
-		"watch": "NODE_ENV=development webpack --progress --watch --config webpack.dev.js"
+		"watch": "NODE_ENV=development webpack --progress --watch --config webpack.dev.js",
+		"win-watch": "set NODE_ENV=development && webpack --progress --watch --config webpack.dev.js"
 	},
 	"dependencies": {
 		"@juliushaertl/vue-richtext": "^0.3.1",
