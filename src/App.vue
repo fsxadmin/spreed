@@ -32,6 +32,7 @@
 		<RightSidebar
 			:show-chat-in-sidebar="isInCall" />
 		<PreventUnload :when="isInCall" />
+		<IncomingCall />
 	</Content>
 </template>
 
@@ -56,10 +57,13 @@ import {
 } from './utils/webrtc/index'
 import { emit } from '@nextcloud/event-bus'
 import browserCheck from './mixins/browserCheck'
+import { initConversationsListening } from './services/extendedNotifications'
+import IncomingCall from './components/IncomingCall'
 
 export default {
 	name: 'App',
 	components: {
+		IncomingCall,
 		AppContent,
 		Content,
 		LeftSidebar,
@@ -187,6 +191,8 @@ export default {
 	},
 
 	beforeMount() {
+		const extendedNotificationsCleanup = initConversationsListening(this.$store)
+
 		if (!getCurrentUser()) {
 			EventBus.$once('joinedConversation', () => {
 				this.fixmeDelayedSetupOfGuestUsers()
@@ -218,6 +224,8 @@ export default {
 				signalingKill()
 				leaveConversationSync(this.token)
 			}
+
+			extendedNotificationsCleanup()
 		})
 
 		EventBus.$on('conversationsReceived', (params) => {
