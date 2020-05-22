@@ -293,11 +293,43 @@ export default {
 		 *
 		 * @param {File[] | FileList} files pasted files list
 		 */
-		handleFiles(files) {
+		async handleFiles(files) {
 			// Create a unique id for the upload operation
 			const uploadId = new Date().getTime()
 			// Uploads and shares the files
-			processFiles(files, this.token, uploadId)
+
+			// Use temp message for progress indication
+			// Code copied to avoid conflicts, FIXME get rid of duplication
+			const text = files.length === 1
+				? t('spreed', 'Uploading {fileName}', { fileName: files[0].name })
+				: t('spreed', 'Uploading {filesCount} files', { filesCount: files.length })
+
+			const tempId = this.createTemporaryMessageId()
+			const temporaryMessage = Object.assign({}, {
+				id: tempId,
+				actorId: this.$store.getters.getActorId(),
+				actorType: this.$store.getters.getActorType(),
+				actorDisplayName: this.$store.getters.getDisplayName(),
+				timestamp: 0,
+				systemMessage: 'uploading_file',
+				messageType: '',
+				message: text,
+				messageParameters: {},
+				token: this.token,
+				isReplyable: false,
+				referenceId: Hex.stringify(SHA1(tempId)),
+			})
+
+			this.$store.dispatch('addTemporaryMessage', temporaryMessage)
+			this.$nextTick(function() {
+				document.querySelector('.scroller').scrollTop = document.querySelector('.scroller').scrollHeight
+			})
+
+			try {
+				await processFiles(files, this.token, uploadId)
+			} finally {
+				this.$store.dispatch('deleteMessage', temporaryMessage)
+			}
 		},
 	},
 }
