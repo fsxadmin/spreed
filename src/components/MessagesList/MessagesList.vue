@@ -447,6 +447,7 @@ export default {
 						this.$store.dispatch('forceGuestName', message)
 					}
 					this.$store.dispatch('processMessage', message)
+					EventBus.$emit('messageReceived', message)
 				})
 
 				this.$store.dispatch('setLastKnownMessageId', {

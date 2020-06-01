@@ -9,6 +9,7 @@ const setupAdvancedWindowVisibilityListener = (listener) => {
 		if (currentVisibilityValue !== newValue) {
 			currentVisibilityValue = newValue
 			listener(currentVisibilityValue)
+			console.debug('switch visibility', newValue)
 		}
 	}
 
@@ -41,10 +42,29 @@ const setupAdvancedWindowVisibilityListener = (listener) => {
 	}
 }
 
+const extractStateFromMessage = (token, message, $store) => {
+	if (message) {
+		const currentActorIsAuthor = message.actorType === $store.getters.getActorType()
+			&& message.actorId === $store.getters.getActorId()
+		if (currentActorIsAuthor) {
+			return { unreadMarker: -1 }
+		} else {
+			return {
+				unreadMarker: Math.max(
+					message && message.id ? message.id : 0,
+					$store.getters.getLastKnownMessageId(token) ? $store.getters.getLastKnownMessageId(token) : 0,
+				),
+			}
+		}
+	}
+
+	return { unreadMarker: 0 }
+}
 const initConversationsListening = ($store) => {
 	console.debug('extended notification init')
 
 	let actualState = null
+	let lastStateCache = null
 	let currentUnreadConversations = 0
 
 	const notificationListeners = [
@@ -73,20 +93,7 @@ const initConversationsListening = ($store) => {
 		// Copied from App.vue to avoid merging conflicts
 		// FIXME Should be moved and shared
 		return conversationList.reduce((result, conversation) => {
-			result[conversation.token] = { unreadMarker: 0, hasCall: conversation.hasCall }
-			if (conversation.lastMessage) {
-				const currentActorIsAuthor = conversation.lastMessage.actorType === $store.getters.getActorType()
-					&& conversation.lastMessage.actorId === $store.getters.getActorId()
-				if (currentActorIsAuthor) {
-					result[conversation.token].unreadMarker = -1
-				} else {
-					result[conversation.token].unreadMarker = Math.max(
-						conversation.lastMessage && conversation.lastMessage.id ? conversation.lastMessage.id : 0,
-						$store.getters.getLastKnownMessageId(conversation.token) ? $store.getters.getLastKnownMessageId(conversation.token) : 0,
-					)
-				}
-			}
-
+			result[conversation.token] = extractStateFromMessage(conversation.token, conversation.lastMessage, $store)
 			return result
 		}, {})
 	}
@@ -135,14 +142,32 @@ const initConversationsListening = ($store) => {
 			const windowIsVisible = visibilityListener.isVisible()
 			refreshState(windowIsVisible, newState)
 		}
+
+		lastStateCache = newState
+	}
+
+	const onMessageReceived = (message) => {
+		if (actualState === null) {
+			return
+		}
+
+		const windowIsVisible = visibilityListener.isVisible()
+		const newState = { ...lastStateCache }
+
+		newState[message.token] = extractStateFromMessage(message.token, message, $store)
+
+		refreshState(windowIsVisible, newState)
+		lastStateCache = newState
 	}
 
 	EventBus.$on('conversationsReceived', onConversationsReceived)
+	EventBus.$on('messageReceived', onMessageReceived)
 
 	return () => {
 		console.debug('extended notification cleanup')
 
 		EventBus.$off('conversationsReceived', onConversationsReceived)
+		EventBus.$off('messageReceived', onMessageReceived)
 
 		visibilityListener.destroy()
 	}

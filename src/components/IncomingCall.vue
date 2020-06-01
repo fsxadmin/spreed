@@ -1,34 +1,39 @@
 <template>
-	<div id="incoming-call" v-if="token">
-		<section class="incoming-call__main">
-			<header>
-				<ConversationIcon
-					class="incoming-call__conversation-icon"
-					:item="conversation"
-					:hide-favorite="false"
-					:hide-call="true" />
-				<div class="conversation-display-name">{{ conversation.displayName }}</div>
-			</header>
-			<div class="incoming-call__buttons">
-				<button :disabled="loading"
-					class="top-bar__button primary"
-					@click="joinCall">
-					<span
-						class="icon"
-						:class="startCallIcon" />
-					{{ startCallLabel }}
-				</button>
-				<span style="flex: 0 0 10px"></span>
-				<button :disabled="loading"
-					class="top-bar__button error"
-					@click="rejectCall">
-					<span
-						class="icon icon-leave-call" />
-					{{ rejectCallLabel }}
-				</button>
-			</div>
-		</section>
-	</div>
+	<transition name="incoming-call-transition">
+		<div v-if="token" id="incoming-call">
+			<div class="incoming-call__overlay" />
+			<section class="incoming-call__main">
+				<header>
+					<ConversationIcon
+						class="incoming-call__conversation-icon"
+						:item="conversation"
+						:hide-favorite="false"
+						:hide-call="true" />
+					<div class="conversation-display-name">
+						{{ conversation.displayName }}
+					</div>
+				</header>
+				<div class="incoming-call__buttons">
+					<button :disabled="loading"
+						class="top-bar__button primary"
+						@click="joinCall">
+						<span
+							class="icon"
+							:class="startCallIcon" />
+						{{ startCallLabel }}
+					</button>
+					<span style="flex: 0 0 10px" />
+					<button :disabled="loading"
+						class="top-bar__button error"
+						@click="rejectCall">
+						<span
+							class="icon icon-leave-call" />
+						{{ rejectCallLabel }}
+					</button>
+				</div>
+			</section>
+		</div>
+	</transition>
 </template>
 
 <script>
@@ -46,7 +51,7 @@ export default {
 			loading: false,
 			incomingCallTokens: [],
 			skipCallTokens: [],
-			callSound: null
+			callSound: null,
 		}
 	},
 
@@ -128,9 +133,29 @@ export default {
 
 		const onConversationsReceived = () => {
 			const conversationList = this.$store.getters.conversationsList
-			this.incomingCallTokens = conversationList
-				.filter(x => x.hasCall && !isGhostCall(x))
-				.map(x => x.token)
+			const newIncomingCallTokens = []
+			const skipTokensToRemove = []
+
+			conversationList.forEach(conversation => {
+				const conversationToken = conversation.token
+				if (conversation.hasCall) {
+					if (!isGhostCall(conversation)) {
+						newIncomingCallTokens.push(conversationToken)
+					}
+				} else {
+					if (this.skipCallTokens.indexOf(conversationToken) >= 0) {
+						skipTokensToRemove.push(conversationToken)
+					}
+				}
+			})
+
+			this.incomingCallTokens = newIncomingCallTokens
+
+			if (skipTokensToRemove.length > 0) {
+				console.debug('cleanup skip tokens', this.skipCallTokens, skipTokensToRemove)
+				this.skipCallTokens = this.skipCallTokens.filter(t => skipTokensToRemove.indexOf(t) < 0)
+				console.debug('after cleanup skip tokens', this.skipCallTokens)
+			}
 		}
 
 		const onJoinCall = (tokens) => {
@@ -141,8 +166,19 @@ export default {
 			this.addTokenToSkipped(token)
 		}
 
+		const onMessageReceived = (message) => {
+			console.debug('incoming call::message received', message)
+			if (message.messageType === 'system' && message.systemMessage === 'call_started') {
+				if (this.incomingCallTokens.length === 0 || this.incomingCallTokens.indexOf(message.token) < 0) {
+					this.incomingCallTokens.push(message.token)
+					console.debug('force call by incoming message')
+				}
+			}
+		}
+
 		EventBus.$on('conversationsReceived', onConversationsReceived)
 		EventBus.$on('Signaling::joinCall', onJoinCall)
+		EventBus.$on('messageReceived', onMessageReceived)
 	},
 
 	methods: {
@@ -196,15 +232,31 @@ export default {
 		right: 0;
 		bottom: 0;
 		top: 0;
-		background: rgba(0, 0, 0, 0.5);
+
 		z-index: 999999;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		opacity: 1;
+
+		.incoming-call__overlay {
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			top: 0;
+			background: #000000;
+			opacity: 0.5;
+			z-index: 10;
+			transition: opacity 0.5s;
+		}
 
 		.incoming-call__main {
 			background: rgba(0, 0, 0, 0.9);
 			width: 300px;
+			opacity: 1;
+			z-index: 100;
+			transition: transform 0.5s, opacity 0.5s;
 
 			header {
 				display: flex;
@@ -231,6 +283,27 @@ export default {
 			align-items: center;
 			justify-content: center;
 			padding: 0 20px 20px 20px;
+		}
+	}
+
+	.incoming-call-transition-enter-active, .incoming-call-transition-leave-active {
+		.incoming-call__overlay {
+			transition: opacity 0.5s;
+		}
+
+		.incoming-call__main {
+			transition: transform 0.5s, opacity 0.5s;
+		}
+	}
+
+	.incoming-call-transition-enter, .incoming-call-transition-leave-to, .incoming-call-transition-leave {
+		.incoming-call__overlay {
+			opacity: 0 !important;
+		}
+
+		.incoming-call__main {
+			opacity: 0 !important;
+			transform: translateY(-30px);
 		}
 	}
 
